@@ -1,0 +1,6 @@
+#FileLock
+#Wed Dec 30 12:38:04 GMT 2020
+server=172.21.0.2\:36053
+hostName=keycloak
+method=file
+id=176b3a7c122b32c66f89c1507a09c5f4ec7181c7ad5

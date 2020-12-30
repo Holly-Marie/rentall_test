@@ -1,0 +1,15 @@
+version: '3'
+services:
+  keycloak:
+    image: jboss/keycloak:11.0.3
+    container_name: keycloak
+    restart: unless-stopped
+    environment:
+      DEBUGGING: 1
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+    ports:
+      - 8081:8080
+    hostname: keycloak
+    volumes:
+      - ./keycloak/data/:/opt/jboss/keycloak/standalone/data/
