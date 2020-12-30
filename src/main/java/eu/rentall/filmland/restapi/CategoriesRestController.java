@@ -1,10 +1,11 @@
 package eu.rentall.filmland.restapi;
 
+import eu.rentall.filmland.database.entities.CategoryEntity;
+import eu.rentall.filmland.database.entities.CategorySubscriptionEntity;
+import eu.rentall.filmland.database.projections.CategoryDtoProjection;
 import eu.rentall.filmland.database.repositories.CategoryRepo;
-import eu.rentall.filmland.dtos.categories.AvailableAndSubscribedToCategoriesDto;
-import eu.rentall.filmland.dtos.categories.CategoryDto;
-import eu.rentall.filmland.dtos.categories.CategorySharingRequestDto;
-import eu.rentall.filmland.dtos.categories.CategorySubscriptionRequestDto;
+import eu.rentall.filmland.database.repositories.CategorySubscriptionRepo;
+import eu.rentall.filmland.dtos.categories.*;
 import eu.rentall.filmland.dtos.common.ResponseDto;
 import eu.rentall.filmland.exceptions.AlreadySubscribedException;
 import eu.rentall.filmland.exceptions.CategoryNotFoundException;
@@ -35,10 +36,12 @@ import java.util.stream.Collectors;
 public class CategoriesRestController {
 
   private final CategoryRepo categoryRepo;
+  private final CategorySubscriptionRepo categorySubscriptionRepo;
   private final SubscriptionService subscriptionService;
 
-  public CategoriesRestController(CategoryRepo categoryRepo, SubscriptionService subscriptionService) {
+  public CategoriesRestController(CategoryRepo categoryRepo, CategorySubscriptionRepo categorySubscriptionRepo, SubscriptionService subscriptionService) {
     this.categoryRepo = categoryRepo;
+    this.categorySubscriptionRepo = categorySubscriptionRepo;
     this.subscriptionService = subscriptionService;
   }
 
@@ -49,12 +52,16 @@ public class CategoriesRestController {
   @GetMapping("")
   public ResponseEntity<AvailableAndSubscribedToCategoriesDto> getAllAvailableAndSubscribedToCategories(@AuthenticationPrincipal KeycloakPrincipal<?> principal) {
     String email = unwrapEmail(principal);
-    log.error("getAllAvailableAndSubscribedToCategories(user = {})", email);
 
+    List<CategorySubscriptionEntity> subscribedCategoryEntities = this.categorySubscriptionRepo.findSubscribedCategories(email);
+    List<CategoryDto> subscribedCategories = subscribedCategoryEntities.stream().map(cs -> {
+      CategoryEntity c = cs.getCategory();
+      return new SubscribedCategoryDto(c.getName(), c.getAvailableContent(), c.getPrice(), cs.getStartDate());
+    }).collect(Collectors.toList());
+    List<Integer> subscribedCategoryIds = subscribedCategoryEntities.stream().map(cs -> cs.getCategory().getId()).collect(Collectors.toList());
+    List<CategoryDtoProjection> availableCategories = this.categoryRepo.findAllByIdNotIn(subscribedCategoryIds);
 
-    List<CategoryDto> availableCategories = this.categoryRepo.findAll().stream().map(c -> new CategoryDto(c.getName(), c.getAvailableContent(), c.getPrice())).collect(Collectors.toList());
-
-    return new ResponseEntity<>(new AvailableAndSubscribedToCategoriesDto(availableCategories, null), HttpStatus.OK);
+    return new ResponseEntity<>(new AvailableAndSubscribedToCategoriesDto(availableCategories, subscribedCategories), HttpStatus.OK);
   }
 
   /**

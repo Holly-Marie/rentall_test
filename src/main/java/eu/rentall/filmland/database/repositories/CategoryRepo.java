@@ -1,8 +1,11 @@
 package eu.rentall.filmland.database.repositories;
 
 import eu.rentall.filmland.database.entities.CategoryEntity;
+import eu.rentall.filmland.database.projections.CategoryDtoProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -19,4 +22,6 @@ import java.util.Optional;
 public interface CategoryRepo extends JpaRepository<CategoryEntity, Integer> {
 
   Optional<CategoryEntity> findByNameIgnoreCase(String name);
+
+  List<CategoryDtoProjection> findAllByIdNotIn(Collection<Integer> ids);
 }

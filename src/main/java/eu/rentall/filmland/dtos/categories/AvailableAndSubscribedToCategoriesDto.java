@@ -1,5 +1,6 @@
 package eu.rentall.filmland.dtos.categories;
 
+import eu.rentall.filmland.database.projections.CategoryDtoProjection;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -15,6 +16,6 @@ import java.util.List;
 @Data
 @AllArgsConstructor
 public class AvailableAndSubscribedToCategoriesDto {
-  private List<CategoryDto> availableCategories;
+  private List<CategoryDtoProjection> availableCategories;
   private List<CategoryDto> subscribedCategories;
 }

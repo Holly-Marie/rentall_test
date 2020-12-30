@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -18,4 +19,9 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class SubscribedCategoryDto extends CategoryDto {
   private LocalDate startDate;
+
+  public SubscribedCategoryDto(String name, int availableContent, BigDecimal price, LocalDate startDate) {
+    super(name, availableContent, price);
+    this.startDate = startDate;
+  }
 }

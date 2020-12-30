@@ -1,5 +1,6 @@
 package eu.rentall.filmland.dtos.categories;
 
+import eu.rentall.filmland.database.projections.CategoryDtoProjection;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,7 +17,7 @@ import java.math.BigDecimal;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CategoryDto {
+public class CategoryDto implements CategoryDtoProjection {
   private String name;
   private int availableContent;
   /* use BigDecimal since this holds a currency and precision and correct representation are paramount */

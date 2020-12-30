@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
 import javax.validation.constraints.NotBlank;
+import java.time.LocalDate;
 import java.util.Optional;
 
 /**
@@ -51,7 +52,7 @@ public class SubscriptionService {
       throw new AlreadySubscribedException(String.format("User with email: %s is already subscribed to category: %s", userEmail, categoryName));
     }
 
-    CategorySubscriptionEntity subscription = categorySubscriptionRepo.save(CategorySubscriptionEntity.builder().subscriber(userEntity).category(categoryEntity).price(categoryEntity.getPrice()).build());
+    CategorySubscriptionEntity subscription = categorySubscriptionRepo.save(CategorySubscriptionEntity.builder().subscriber(userEntity).category(categoryEntity).price(categoryEntity.getPrice()).startDate(LocalDate.of(2020, 10, 10)).build());
     userEntity.getSubscriptions().add(subscription);
     categoryEntity.getSubscriptions().add(subscription);
 

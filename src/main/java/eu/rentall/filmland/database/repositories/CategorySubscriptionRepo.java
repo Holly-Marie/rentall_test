@@ -1,9 +1,12 @@
 package eu.rentall.filmland.database.repositories;
 
 import eu.rentall.filmland.database.entities.CategorySubscriptionEntity;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.util.List;
 
 /**
  * [Class description.  The first sentence should be a meaningful summary of the class since it
@@ -20,4 +23,10 @@ public interface CategorySubscriptionRepo extends JpaRepository<CategorySubscrip
 
   @Query("SELECT (COUNT(cs.id ) > 0) as subscribed FROM CategorySubscriptionEntity cs where LOWER(cs.subscriber.email)=LOWER(:email) AND LOWER(cs.category.name)=LOWER(:category) ")
   boolean isUserSubscribed(@Param("email") String userEmail, @Param("category") String category);
+
+
+  @EntityGraph(attributePaths = "subscriber")
+  @Query("SELECT cs FROM CategorySubscriptionEntity cs where LOWER(cs.subscriber.email)=LOWER(:email)")
+  List<CategorySubscriptionEntity> findSubscribedCategories(@Param("email") String userEmail);
+
 }

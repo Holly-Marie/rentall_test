@@ -6,6 +6,7 @@ import javax.persistence.*;
 import javax.validation.constraints.Min;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * [Class description.  The first sentence should be a meaningful summary of the class since it
@@ -42,4 +43,7 @@ public class CategorySubscriptionEntity implements Serializable {
   @Min(0)
   @Column(nullable = false)
   private BigDecimal price;
+
+  @Column(nullable = false)
+  private LocalDate startDate;
 }
