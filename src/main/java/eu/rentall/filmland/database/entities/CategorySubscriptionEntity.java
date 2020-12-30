@@ -1,9 +1,10 @@
 package eu.rentall.filmland.database.entities;
 
-import lombok.Data;
+import lombok.*;
 
 import javax.persistence.*;
 import javax.validation.constraints.Min;
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
@@ -20,17 +21,22 @@ import java.math.BigDecimal;
 @Entity
 @Table(name = "categories_subscriptions")
 @Data
-public class CategorySubscriptionEntity {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+public class CategorySubscriptionEntity implements Serializable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(nullable = false)
+  @EqualsAndHashCode.Include
   private int id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   private UserEntity subscriber;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   private CategoryEntity category;
 
   @Min(0)

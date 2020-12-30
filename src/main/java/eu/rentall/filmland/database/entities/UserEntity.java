@@ -1,14 +1,13 @@
 package eu.rentall.filmland.database.entities;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.validator.constraints.Length;
 
 import javax.persistence.*;
 import javax.validation.constraints.Email;
 import java.io.Serializable;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Database entity representing a user.
@@ -23,18 +22,23 @@ import java.io.Serializable;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class UserEntity implements Serializable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(nullable = false)
+  @EqualsAndHashCode.Include
   private int id;
 
   @Length(max = 64)
-  @Column(length = 64, nullable = false)
+  @Column(length = 64, unique = true)
   private String userName;
 
   @Length(max = 265) @Email
-  @Column(length = 256, nullable = false)
+  @Column(length = 256, nullable = false, unique = true)
   private String email;
+
+  @OneToMany(mappedBy = "subscriber", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+  private Set<CategorySubscriptionEntity> subscriptions = new HashSet<>();
 }

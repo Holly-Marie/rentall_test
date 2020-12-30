@@ -1,14 +1,14 @@
 package eu.rentall.filmland.database.entities;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.validator.constraints.Length;
 
 import javax.persistence.*;
 import javax.validation.constraints.Min;
+import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Database entity representing a category.
@@ -23,11 +23,13 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CategoryEntity {
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+public class CategoryEntity implements Serializable {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(nullable = false)
+  @EqualsAndHashCode.Include
   private int id;
 
   @Length(max = 128)
@@ -41,4 +43,7 @@ public class CategoryEntity {
   @Min(0)
   @Column(nullable = false)
   private BigDecimal price;
+
+  @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+  private Set<CategorySubscriptionEntity> subscriptions = new HashSet<>();
 }

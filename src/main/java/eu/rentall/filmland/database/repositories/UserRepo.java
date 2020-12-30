@@ -3,6 +3,8 @@ package eu.rentall.filmland.database.repositories;
 import eu.rentall.filmland.database.entities.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
+
 /**
  * [Class description.  The first sentence should be a meaningful summary of the class since it
  * will be displayed as the class summary on the Javadoc package page.]
@@ -15,4 +17,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * Created 30-12-2020 14:09
  */
 public interface UserRepo extends JpaRepository<UserEntity, Integer> {
+  Optional<UserEntity> findByEmailIgnoreCase(String email);
 }
