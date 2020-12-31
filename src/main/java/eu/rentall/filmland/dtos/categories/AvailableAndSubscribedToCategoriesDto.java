@@ -17,5 +17,5 @@ import java.util.List;
 @AllArgsConstructor
 public class AvailableAndSubscribedToCategoriesDto {
   private List<CategoryDtoProjection> availableCategories;
-  private List<CategoryDto> subscribedCategories;
+  private List<SubscribedCategoryDto> subscribedCategories;
 }

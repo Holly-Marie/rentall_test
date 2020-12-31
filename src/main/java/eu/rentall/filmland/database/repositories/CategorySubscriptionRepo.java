@@ -21,12 +21,12 @@ import java.util.List;
  */
 public interface CategorySubscriptionRepo extends JpaRepository<CategorySubscriptionEntity, Integer> {
 
-  @Query("SELECT (COUNT(cs.id ) > 0) as subscribed FROM CategorySubscriptionEntity cs where LOWER(cs.subscriber.email)=LOWER(:email) AND LOWER(cs.category.name)=LOWER(:category) ")
+  @Query("SELECT (COUNT(cs.id ) > 0) as subscribed FROM CategorySubscriptionEntity cs inner join cs.subscribers s where LOWER(s.email)=LOWER(:email) AND LOWER(cs.category.name)=LOWER(:category) ")
   boolean isUserSubscribed(@Param("email") String userEmail, @Param("category") String category);
 
 
-  @EntityGraph(attributePaths = "subscriber")
-  @Query("SELECT cs FROM CategorySubscriptionEntity cs where LOWER(cs.subscriber.email)=LOWER(:email)")
+  @EntityGraph(attributePaths = {"category", "subscribers", "periods"})
+  @Query("SELECT cs FROM CategorySubscriptionEntity cs inner join cs.subscribers s where LOWER(s.email)=LOWER(:email)")
   List<CategorySubscriptionEntity> findSubscribedCategories(@Param("email") String userEmail);
 
 }

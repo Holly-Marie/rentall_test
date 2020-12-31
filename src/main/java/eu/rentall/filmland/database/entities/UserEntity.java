@@ -39,6 +39,9 @@ public class UserEntity implements Serializable {
   @Column(length = 256, nullable = false, unique = true)
   private String email;
 
-  @OneToMany(mappedBy = "subscriber", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+  @ManyToMany(mappedBy = "subscribers", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
   private Set<CategorySubscriptionEntity> subscriptions = new HashSet<>();
+
+  @OneToMany(mappedBy = "subscriber", fetch = FetchType.LAZY)
+  private Set<SubscriptionInvoiceEntity> invoices;
 }

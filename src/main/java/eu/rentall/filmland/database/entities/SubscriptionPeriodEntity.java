@@ -3,7 +3,7 @@ package eu.rentall.filmland.database.entities;
 import lombok.*;
 
 import javax.persistence.*;
-import java.io.Serializable;
+import javax.validation.constraints.Min;
 import java.time.LocalDate;
 import java.util.Set;
 
@@ -16,16 +16,16 @@ import java.util.Set;
  *
  * @author Holly Schoene
  * @version 2.0
- * Created 30-12-2020 11:51
+ * Created 31-12-2020 12:33
  */
 @Entity
-@Table(name = "categories_subscriptions")
+@Table(name = "subscription_periods")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class CategorySubscriptionEntity implements Serializable {
+public class SubscriptionPeriodEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,13 +36,16 @@ public class CategorySubscriptionEntity implements Serializable {
   @Column(nullable = false)
   private LocalDate startDate;
 
-  @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-  private Set<UserEntity> subscribers;
+  @Column(nullable = false)
+  private LocalDate endDate;
 
-  @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, optional = false)
-  private CategoryEntity category;
+  @Min(0)
+  @Column(nullable = false)
+  private int remainingContent;
 
-  @OneToMany(mappedBy = "subscription", fetch = FetchType.LAZY)
-  private Set<SubscriptionPeriodEntity> periods;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  private CategorySubscriptionEntity subscription;
 
+  @OneToMany(mappedBy = "subscriptionPeriod", fetch = FetchType.LAZY)
+  private Set<SubscriptionInvoiceEntity> invoices;
 }

@@ -1,11 +1,10 @@
 package eu.rentall.filmland.restapi;
 
-import eu.rentall.filmland.database.entities.CategoryEntity;
-import eu.rentall.filmland.database.entities.CategorySubscriptionEntity;
-import eu.rentall.filmland.database.projections.CategoryDtoProjection;
 import eu.rentall.filmland.database.repositories.CategoryRepo;
 import eu.rentall.filmland.database.repositories.CategorySubscriptionRepo;
-import eu.rentall.filmland.dtos.categories.*;
+import eu.rentall.filmland.dtos.categories.AvailableAndSubscribedToCategoriesDto;
+import eu.rentall.filmland.dtos.categories.CategorySharingRequestDto;
+import eu.rentall.filmland.dtos.categories.CategorySubscriptionRequestDto;
 import eu.rentall.filmland.dtos.common.ResponseDto;
 import eu.rentall.filmland.exceptions.AlreadySubscribedException;
 import eu.rentall.filmland.exceptions.CategoryNotFoundException;
@@ -20,8 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 /**
  * REST controller for endpoints concerning categories.
@@ -53,15 +51,7 @@ public class CategoriesRestController {
   public ResponseEntity<AvailableAndSubscribedToCategoriesDto> getAllAvailableAndSubscribedToCategories(@AuthenticationPrincipal KeycloakPrincipal<?> principal) {
     String email = unwrapEmail(principal);
 
-    List<CategorySubscriptionEntity> subscribedCategoryEntities = this.categorySubscriptionRepo.findSubscribedCategories(email);
-    List<CategoryDto> subscribedCategories = subscribedCategoryEntities.stream().map(cs -> {
-      CategoryEntity c = cs.getCategory();
-      return new SubscribedCategoryDto(c.getName(), c.getAvailableContent(), c.getPrice(), cs.getStartDate());
-    }).collect(Collectors.toList());
-    List<Integer> subscribedCategoryIds = subscribedCategoryEntities.stream().map(cs -> cs.getCategory().getId()).collect(Collectors.toList());
-    List<CategoryDtoProjection> availableCategories = this.categoryRepo.findAllByIdNotIn(subscribedCategoryIds);
-
-    return new ResponseEntity<>(new AvailableAndSubscribedToCategoriesDto(availableCategories, subscribedCategories), HttpStatus.OK);
+    return new ResponseEntity<>(subscriptionService.getAllAvailableAndSubscribedToCategories(email), HttpStatus.OK);
   }
 
   /**
@@ -70,10 +60,9 @@ public class CategoriesRestController {
    */
   @PostMapping("subscribe")
   public ResponseEntity<ResponseDto> subscribeToCategory(@Valid @RequestBody CategorySubscriptionRequestDto subscriptionRequest, @AuthenticationPrincipal KeycloakPrincipal<?> principal) {
-    String email = unwrapEmail(principal);
-    if(!email.equalsIgnoreCase(subscriptionRequest.getEmail())) {
-      log.debug("Given email ''{}'' does not match email of authenticated user.", subscriptionRequest.getEmail());
-      return new ResponseEntity<>(new ResponseDto("failed", "Given email '%s' does not match email of authenticated user.", subscriptionRequest.getEmail()), HttpStatus.BAD_REQUEST);
+    Optional<ResponseEntity<ResponseDto>> errorResponse = checkEmailMatchesAuthenticatedUser(subscriptionRequest.getEmail(), principal);
+    if(errorResponse.isPresent()) {
+      return errorResponse.get();
     }
 
     String category = subscriptionRequest.getAvailableCategory();
@@ -94,7 +83,12 @@ public class CategoriesRestController {
    */
   @PostMapping("share")
   public ResponseEntity<ResponseDto> shareCategory(@Valid @RequestBody CategorySharingRequestDto sharingRequest, @AuthenticationPrincipal KeycloakPrincipal<?> principal) {
-    String email = unwrapEmail(principal);
+    Optional<ResponseEntity<ResponseDto>> errorResponse = checkEmailMatchesAuthenticatedUser(sharingRequest.getEmail(), principal);
+    if(errorResponse.isPresent()) {
+      return errorResponse.get();
+    }
+
+
     // TODO implement business logic
 
     boolean success = false;
@@ -117,6 +111,16 @@ public class CategoriesRestController {
       return email == null ? "" : email;
     } catch (Exception e) {
       return "";
+    }
+  }
+
+  private Optional<ResponseEntity<ResponseDto>> checkEmailMatchesAuthenticatedUser(String requestEmail, KeycloakPrincipal<?> principal) {
+    String email = unwrapEmail(principal);
+    if(!email.equalsIgnoreCase(requestEmail)) {
+      log.debug("Given email ''{}'' does not match email of authenticated user.", requestEmail);
+      return Optional.of(new ResponseEntity<>(new ResponseDto("failed", "Given email '%s' does not match email of authenticated user.", requestEmail), HttpStatus.BAD_REQUEST));
+    } else {
+      return Optional.empty();
     }
   }
 }

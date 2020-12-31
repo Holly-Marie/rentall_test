@@ -1,11 +1,14 @@
 package eu.rentall.filmland.dtos.categories;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Set;
 
 /**
  * Data transfer object representing a category a logged in user is subscribed to.
@@ -15,13 +18,15 @@ import java.time.LocalDate;
  * Created 30-12-2020 10:27
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
+@Builder
 @AllArgsConstructor
-public class SubscribedCategoryDto extends CategoryDto {
+public class SubscribedCategoryDto {
+  @NotBlank
+  private String name;
+  @Min(0)
+  private int remainingContent;
+  @Min(0)
+  private BigDecimal price;
   private LocalDate startDate;
-
-  public SubscribedCategoryDto(String name, int availableContent, BigDecimal price, LocalDate startDate) {
-    super(name, availableContent, price);
-    this.startDate = startDate;
-  }
+  private Set<String> sharingSubscribers;
 }

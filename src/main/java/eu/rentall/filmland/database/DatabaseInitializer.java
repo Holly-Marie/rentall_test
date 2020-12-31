@@ -43,7 +43,7 @@ public class DatabaseInitializer {
 
     CategoryEntity dutchFilms = categoryRepo.save(CategoryEntity.builder().name("Dutch Films").availableContent(10).price(BigDecimal.valueOf(4.0)).build());
     CategoryEntity dutchSeries = categoryRepo.save(CategoryEntity.builder().name("Dutch Series").availableContent(20).price(BigDecimal.valueOf(6.0)).build());
-    CategoryEntity internationalFilms = categoryRepo.save(CategoryEntity.builder().name("International Films").availableContent(40).price(BigDecimal.valueOf(8.0)).build());
+    CategoryEntity internationalFilms = categoryRepo.save(CategoryEntity.builder().name("International Films").availableContent(5).price(BigDecimal.valueOf(8.0)).build());
 
     try {
       subscriptionService.subscribe(userJava.getEmail(), internationalFilms.getName());
