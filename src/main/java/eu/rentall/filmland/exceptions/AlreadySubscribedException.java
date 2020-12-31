@@ -1,11 +1,7 @@
 package eu.rentall.filmland.exceptions;
 
 /**
- * [Class description.  The first sentence should be a meaningful summary of the class since it
- * will be displayed as the class summary on the Javadoc package page.]
- * <p>
- * [Other notes, including guaranteed invariants, usage instructions and/or examples, reminders
- * about desired improvements, etc.]
+ * Exception thrown if a user is already subscribed to a category but still tries to subscribe again.
  *
  * @author Holly Schoene
  * @version 2.0

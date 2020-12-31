@@ -1,13 +1,12 @@
 package eu.rentall.filmland.restapi;
 
-import eu.rentall.filmland.database.repositories.CategoryRepo;
-import eu.rentall.filmland.database.repositories.CategorySubscriptionRepo;
 import eu.rentall.filmland.dtos.categories.AvailableAndSubscribedToCategoriesDto;
 import eu.rentall.filmland.dtos.categories.CategorySharingRequestDto;
 import eu.rentall.filmland.dtos.categories.CategorySubscriptionRequestDto;
 import eu.rentall.filmland.dtos.common.ResponseDto;
 import eu.rentall.filmland.exceptions.AlreadySubscribedException;
 import eu.rentall.filmland.exceptions.CategoryNotFoundException;
+import eu.rentall.filmland.exceptions.NotSubscribedException;
 import eu.rentall.filmland.exceptions.UserNotFoundException;
 import eu.rentall.filmland.services.SubscriptionService;
 import lombok.extern.slf4j.Slf4j;
@@ -33,13 +32,9 @@ import java.util.Optional;
 @RestController
 public class CategoriesRestController {
 
-  private final CategoryRepo categoryRepo;
-  private final CategorySubscriptionRepo categorySubscriptionRepo;
   private final SubscriptionService subscriptionService;
 
-  public CategoriesRestController(CategoryRepo categoryRepo, CategorySubscriptionRepo categorySubscriptionRepo, SubscriptionService subscriptionService) {
-    this.categoryRepo = categoryRepo;
-    this.categorySubscriptionRepo = categorySubscriptionRepo;
+  public CategoriesRestController(SubscriptionService subscriptionService) {
     this.subscriptionService = subscriptionService;
   }
 
@@ -88,20 +83,18 @@ public class CategoriesRestController {
       return errorResponse.get();
     }
 
-
-    // TODO implement business logic
-
-    boolean success = false;
-    if(success) {
+    String category = sharingRequest.getSubscribedCategory();
+    try {
+      subscriptionService.shareSubscription(sharingRequest.getEmail(), sharingRequest.getCustomer(), category);
+      log.info("User with email ''{}'' shared category ''{}'' with user with email ''{}''.", sharingRequest.getEmail(), category, sharingRequest.getCustomer());
       return new ResponseEntity<>(new ResponseDto("successful", "Successfully shared category: '%s' with user: '%s'.",
-          sharingRequest.getSubscribedCategory(), sharingRequest.getCustomer()), HttpStatus.ACCEPTED);
-    } else {
-      return new ResponseEntity<>(new ResponseDto("failed", "Sharing category '%s' with user: '%s' was refused, " +
-          "since the user to share with does not exist.",
-          sharingRequest.getSubscribedCategory(), sharingRequest.getCustomer()), HttpStatus.FORBIDDEN);
-//      return new ResponseEntity<>(new ResponseDto("failed", "Sharing category '%s' with user: '%s' was refused, " +
-//          "since the authenticated user is not subscribed to that category.",
-//          sharingRequest.getSubscribedCategory(), sharingRequest.getCustomer()), HttpStatus.FORBIDDEN);
+          category, sharingRequest.getCustomer()), HttpStatus.ACCEPTED);
+    } catch (UserNotFoundException | CategoryNotFoundException e) {
+      return new ResponseEntity<>(new ResponseDto("failed", "Sharing category '%s' with user: '%s' was refused. %s",
+          category, sharingRequest.getCustomer(), e.getMessage()), HttpStatus.NOT_FOUND);
+    } catch (AlreadySubscribedException | NotSubscribedException e) {
+      return new ResponseEntity<>(new ResponseDto("failed", "Sharing category '%s' with user: '%s' was refused. %s",
+          category, sharingRequest.getCustomer(), e.getMessage()), HttpStatus.FORBIDDEN);
     }
   }
 

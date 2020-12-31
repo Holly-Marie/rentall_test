@@ -26,7 +26,7 @@ public interface CategorySubscriptionRepo extends JpaRepository<CategorySubscrip
 
 
   @EntityGraph(attributePaths = {"category", "subscribers", "periods"})
-  @Query("SELECT cs FROM CategorySubscriptionEntity cs inner join cs.subscribers s where LOWER(s.email)=LOWER(:email)")
+  @Query("SELECT cs1 FROM CategorySubscriptionEntity cs1 where cs1.id in (SELECT cs.id FROM CategorySubscriptionEntity cs inner join cs.subscribers s where LOWER(s.email)=LOWER(:email))")
   List<CategorySubscriptionEntity> findSubscribedCategories(@Param("email") String userEmail);
 
 }

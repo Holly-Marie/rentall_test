@@ -1,19 +1,19 @@
 package eu.rentall.filmland.exceptions;
 
 /**
- * Exception thrown if no user matching the given information is found.
+ * Exception thrown if a user is not subscribed to a category but wants to interact with a subscription to that category..
  *
  * @author Holly Schoene
  * @version 2.0
- * Created 30-12-2020 20:13
+ * Created 31-12-2020 16:29
  */
-public class UserNotFoundException extends RuntimeException {
+public class NotSubscribedException extends RuntimeException {
   /**
    * Constructs a new runtime exception with {@code null} as its
    * detail message.  The cause is not initialized, and may subsequently be
    * initialized by a call to {@link #initCause}.
    */
-  public UserNotFoundException() {
+  public NotSubscribedException() {
   }
 
   /**
@@ -24,7 +24,7 @@ public class UserNotFoundException extends RuntimeException {
    * @param message the detail message. The detail message is saved for
    *                later retrieval by the {@link #getMessage()} method.
    */
-  public UserNotFoundException(String message) {
+  public NotSubscribedException(String message) {
     super(message);
   }
 
@@ -42,7 +42,7 @@ public class UserNotFoundException extends RuntimeException {
    *                unknown.)
    * @since 1.4
    */
-  public UserNotFoundException(String message, Throwable cause) {
+  public NotSubscribedException(String message, Throwable cause) {
     super(message, cause);
   }
 
@@ -59,7 +59,7 @@ public class UserNotFoundException extends RuntimeException {
    *              unknown.)
    * @since 1.4
    */
-  public UserNotFoundException(Throwable cause) {
+  public NotSubscribedException(Throwable cause) {
     super(cause);
   }
 
@@ -77,7 +77,7 @@ public class UserNotFoundException extends RuntimeException {
    *                           be writable
    * @since 1.7
    */
-  public UserNotFoundException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
+  public NotSubscribedException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
     super(message, cause, enableSuppression, writableStackTrace);
   }
 }
