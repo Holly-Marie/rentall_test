@@ -63,7 +63,7 @@ public class CategoriesRestController {
     String category = subscriptionRequest.getAvailableCategory();
     try {
       subscriptionService.subscribe(subscriptionRequest.getEmail(), category);
-      log.info("User with email ''{}'' subscribed to category ''{}''.", subscriptionRequest.getEmail(), category);
+      log.info("User with email '{}' subscribed to category '{}'.", subscriptionRequest.getEmail(), category);
       return new ResponseEntity<>(new ResponseDto("successful", "Successfully subscribed to category: %s.", subscriptionRequest.getAvailableCategory()), HttpStatus.ACCEPTED);
     } catch (UserNotFoundException | CategoryNotFoundException e) {
       return new ResponseEntity<>(new ResponseDto("failed", "Subscription to category '%s' refused. %s", category, e.getMessage()), HttpStatus.NOT_FOUND);
@@ -86,7 +86,7 @@ public class CategoriesRestController {
     String category = sharingRequest.getSubscribedCategory();
     try {
       subscriptionService.shareSubscription(sharingRequest.getEmail(), sharingRequest.getCustomer(), category);
-      log.info("User with email ''{}'' shared category ''{}'' with user with email ''{}''.", sharingRequest.getEmail(), category, sharingRequest.getCustomer());
+      log.info("User with email '{}' shared category '{}' with user with email '{}'.", sharingRequest.getEmail(), category, sharingRequest.getCustomer());
       return new ResponseEntity<>(new ResponseDto("successful", "Successfully shared category: '%s' with user: '%s'.",
           category, sharingRequest.getCustomer()), HttpStatus.ACCEPTED);
     } catch (UserNotFoundException | CategoryNotFoundException e) {
@@ -110,7 +110,7 @@ public class CategoriesRestController {
   private Optional<ResponseEntity<ResponseDto>> checkEmailMatchesAuthenticatedUser(String requestEmail, KeycloakPrincipal<?> principal) {
     String email = unwrapEmail(principal);
     if(!email.equalsIgnoreCase(requestEmail)) {
-      log.debug("Given email ''{}'' does not match email of authenticated user.", requestEmail);
+      log.debug("Given email '{}' does not match email of authenticated user.", requestEmail);
       return Optional.of(new ResponseEntity<>(new ResponseDto("failed", "Given email '%s' does not match email of authenticated user.", requestEmail), HttpStatus.BAD_REQUEST));
     } else {
       return Optional.empty();

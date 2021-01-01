@@ -43,12 +43,10 @@ public class AuthenticationRestController {
    */
   @PostMapping("/login")
   public ResponseEntity<ResponseDto> login(@Valid @RequestBody UserCredentialDto userCredential) throws IOException {
-    log.error("user is trying to log in");
-
     CloseableHttpClient client = HttpClients.createDefault();
     HttpPost httpPost = new HttpPost("http://localhost:8081/auth/realms/filmland/protocol/openid-connect/token");
 
-    List<NameValuePair> params = new ArrayList<NameValuePair>();
+    List<NameValuePair> params = new ArrayList<>();
     params.add(new BasicNameValuePair("grant_type", "password"));
     params.add(new BasicNameValuePair("client_id", "filmland-backend"));
     params.add(new BasicNameValuePair("client_secret", "4e750b1f-87cb-4711-864f-060426a1861b")); // TODO move client secret to secure storage
@@ -60,8 +58,10 @@ public class AuthenticationRestController {
     if(response.getStatusLine().getStatusCode() == 200) {
       byte[] responseBytes = response.getEntity().getContent().readAllBytes();
       String body = new String(responseBytes, StandardCharsets.UTF_8);
+      log.info("user with email address '{}' logged in successfully", userCredential.getEmail());
       return new ResponseEntity<>(new LoginResponseDto(body, "Login successful", "User is successfully logged in."), HttpStatus.OK);
     } else {
+      log.warn("user with email address '{}' made invalid login attempt", userCredential.getEmail());
       // don't reveal if the user name was not found or the password is incorrect, could give attackers a faster way in
       return new ResponseEntity<>(new ResponseDto("Login failed", "User credentials incorrect. Login refused!"), HttpStatus.UNAUTHORIZED);
     }

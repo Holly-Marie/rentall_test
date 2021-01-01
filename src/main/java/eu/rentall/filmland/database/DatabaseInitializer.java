@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 /**
  * This class inserts initial data into the database after start up.
@@ -34,15 +35,16 @@ public class DatabaseInitializer {
 
   @PostConstruct
   public void init(){
-    UserEntity userJava = userRepo.save(UserEntity.builder().userName("java").email("java@rent-all.com").build());
-    UserEntity userKotlin = userRepo.save(UserEntity.builder().userName("kotlin").email("kotlin@rent-all.com").build());
+    UserEntity userJava = userRepo.save(UserEntity.builder().userName("java").email("java@rent-all.com").build()); // pw: 1234
+    UserEntity userKotlin = userRepo.save(UserEntity.builder().userName("kotlin").email("kotlin@rent-all.com").build()); // pw: 1234
+    UserEntity userAdmin = userRepo.save(UserEntity.builder().userName("admin").email("admin@rent-all.com").build()); // pw: 1234
 
     CategoryEntity dutchFilms = categoryRepo.save(CategoryEntity.builder().name("Dutch Films").availableContent(10).price(BigDecimal.valueOf(4.0)).build());
     CategoryEntity dutchSeries = categoryRepo.save(CategoryEntity.builder().name("Dutch Series").availableContent(20).price(BigDecimal.valueOf(6.0)).build());
     CategoryEntity internationalFilms = categoryRepo.save(CategoryEntity.builder().name("International Films").availableContent(5).price(BigDecimal.valueOf(8.0)).build());
 
     try {
-      subscriptionService.subscribe(userJava.getEmail(), internationalFilms.getName());
+      subscriptionService.subscribe(userJava.getEmail(), internationalFilms.getName(), LocalDate.now().minusDays(28));
     } catch (RuntimeException e) {
       log.warn("subscribing to a a category failed:", e);
     }

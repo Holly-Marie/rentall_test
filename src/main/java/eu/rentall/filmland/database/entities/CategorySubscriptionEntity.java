@@ -5,6 +5,7 @@ import lombok.*;
 import javax.persistence.*;
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -33,12 +34,12 @@ public class CategorySubscriptionEntity implements Serializable {
   private LocalDate startDate;
 
   @ManyToMany(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-  private Set<UserEntity> subscribers;
+  private Set<UserEntity> subscribers = new HashSet<>();
 
   @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, optional = false)
   private CategoryEntity category;
 
   @OneToMany(mappedBy = "subscription", fetch = FetchType.LAZY)
-  private Set<SubscriptionPeriodEntity> periods;
+  private Set<SubscriptionPeriodEntity> periods = new HashSet<>();
 
 }

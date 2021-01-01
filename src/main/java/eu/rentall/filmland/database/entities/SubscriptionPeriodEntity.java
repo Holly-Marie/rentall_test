@@ -5,6 +5,7 @@ import lombok.*;
 import javax.persistence.*;
 import javax.validation.constraints.Min;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -43,5 +44,5 @@ public class SubscriptionPeriodEntity {
   private CategorySubscriptionEntity subscription;
 
   @OneToMany(mappedBy = "subscriptionPeriod", fetch = FetchType.LAZY)
-  private Set<SubscriptionInvoiceEntity> invoices;
+  private Set<SubscriptionInvoiceEntity> invoices = new HashSet<>();
 }

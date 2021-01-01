@@ -20,9 +20,11 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -91,6 +93,21 @@ public class SubscriptionService {
    */
   @Transactional
   public void subscribe(@NotBlank String userEmail, @NotBlank String categoryName) throws UserNotFoundException, CategoryNotFoundException, AlreadySubscribedException {
+    subscribe(userEmail, categoryName, LocalDate.now());
+  }
+
+  /**
+   * Subscribe a user to a category.
+   *
+   * @param userEmail    the user to subscribe
+   * @param categoryName the category to subscribe to
+   * @param startDate    the date when the user subscribed
+   * @throws UserNotFoundException      if no user with the given userEmail is found
+   * @throws CategoryNotFoundException  if no category with the given categoryName is found
+   * @throws AlreadySubscribedException if the user is already subscribed to that category
+   */
+  @Transactional
+  public void subscribe(@NotBlank String userEmail, @NotBlank String categoryName, @NotNull LocalDate startDate) throws UserNotFoundException, CategoryNotFoundException, AlreadySubscribedException {
     final Optional<UserEntity> userOpt = userRepo.findByEmailIgnoreCase(userEmail);
     final UserEntity subscriber = userOpt.orElseThrow(() -> new UserNotFoundException(String.format("Could not find user with email: %s", userEmail)));
 
@@ -99,7 +116,7 @@ public class SubscriptionService {
     final CategorySubscriptionEntity subscription = categorySubscriptionRepo.save(CategorySubscriptionEntity.builder()
         .category(categoryEntity)
         .subscribers(Set.of(subscriber))
-        .startDate(LocalDate.now())
+        .startDate(startDate)
         .build());
     if (subscriber.getSubscriptions() == null) {
       subscriber.setSubscriptions(Set.of(subscription));
@@ -151,15 +168,16 @@ public class SubscriptionService {
   }
 
   @Transactional
-  public void renewSubscriptions() {
+  public int renewSubscriptions() {
+    AtomicInteger renewedCount = new AtomicInteger();
     final LocalDate today = LocalDate.now();
     // just load all ids to be renewed since using spring jpa paging may not work correctly,
     // because we are updating the items and that may influence their order in the page,
     // which may lead to subscriptions being skipped
-    final List<Integer> subscriptionIds = categorySubscriptionRepo.findIdsOfSubscriptionsNeedingToBeRenewed(today.plusDays(3));
+    final List<Integer> subscriptionIds = categorySubscriptionRepo.findIdsOfSubscriptionsNeedingToBeRenewed(today, today.plusDays(3));
     if(subscriptionIds == null || subscriptionIds.size() < 1) {
       log.info("no category subscriptions to renew");
-      return;
+      return renewedCount.get();
     }
     log.info("{} category subscription(s) to renew", subscriptionIds.size());
 
@@ -180,9 +198,13 @@ public class SubscriptionService {
         final SubscriptionPeriodEntity currentPeriod = currentPeriodOpt.get();
         final SubscriptionPeriodEntity nextPeriod = createSubscriptionPeriod(subscription, currentPeriod.getEndDate().plusDays(1));
         createInvoicesForSubscriptionPeriod(nextPeriod);
+
+        renewedCount.getAndIncrement();
       });
       categorySubscriptionRepo.flush(); // flush the current page
     });
+
+    return renewedCount.get();
   }
 
   private CategoryEntity getCategoryIfUserIsNotAlreadySubscribedToIt(@NotBlank String otherEmail, @NotBlank String categoryName) {
@@ -199,7 +221,7 @@ public class SubscriptionService {
     final SubscriptionPeriodEntity period = subscriptionPeriodRepo.save(SubscriptionPeriodEntity.builder()
         .subscription(subscription)
         .startDate(startDate)
-        .endDate(startDate.plusMonths(1))
+        .endDate(startDate.plusMonths(1).minusDays(1))
         .remainingContent(subscription.getCategory().getAvailableContent())
         .build());
     if (subscription.getPeriods() == null) {
@@ -247,7 +269,14 @@ public class SubscriptionService {
       if (period.getInvoices() == null) {
         period.setInvoices(Set.of(invoice));
       } else {
-        period.getInvoices().add(invoice);
+        // the collection can be immutable - in that case we make a copy and add the new invoice
+        try {
+          period.getInvoices().add(invoice);
+        } catch (Exception e) {
+          Set<SubscriptionInvoiceEntity> invoices = new HashSet<>(period.getInvoices());
+          invoices.add(invoice);
+          period.setInvoices(invoices);
+        }
       }
     });
   }
@@ -264,8 +293,9 @@ public class SubscriptionService {
     BigDecimal pricePerSubscriber = BigDecimal.ZERO;
     if(subscription.getPeriods().size() > 1) {
       // this is not the first subscription period
-      MathContext mc = new MathContext(2, RoundingMode.CEILING); // we always round up and may over charge a fraction of a cent but never undercharge
-      pricePerSubscriber = subscription.getCategory().getPrice().divide(BigDecimal.valueOf(subscription.getSubscribers().size()), mc);
+      // we do the division with a precision of 34 significant digits, but then reduce the number to 2 decimal places and always round up
+      // this way we may over charge a fraction of a cent but never undercharge
+      pricePerSubscriber = subscription.getCategory().getPrice().divide(BigDecimal.valueOf(subscription.getSubscribers().size()), MathContext.DECIMAL128).setScale(2, RoundingMode.CEILING);
     }
     return pricePerSubscriber;
   }

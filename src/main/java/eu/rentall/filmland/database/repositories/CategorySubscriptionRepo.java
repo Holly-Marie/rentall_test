@@ -37,15 +37,16 @@ public interface CategorySubscriptionRepo extends JpaRepository<CategorySubscrip
    * <p/>
    * To keep the method database agnostic no database date calculating functions are used and instead
    * the current date plus 3 days needs to be given as an argument.
+   * @param today the current date
    * @param in3days the current date plus 3 days
    * @return a list of subscriptions which need to be renewed
    */
   @EntityGraph(attributePaths = {"category", "subscribers", "periods"})
   @Query("SELECT distinct cs FROM CategorySubscriptionEntity cs where cs.id in " +
       "(SELECT s.id FROM SubscriptionPeriodEntity p inner join p.subscription s " +
-      "where p.startDate > :in3days or (p.startDate < :in3days and p.endDate >= :in3days) " +
+      "where p.startDate > :today or (p.endDate > :today and p.endDate <= :in3days) " +
       "group by s.id having count(p.id) = 1)")
-  List<CategorySubscriptionEntity> findSubscriptionsNeedingToBeRenewed(@Param("in3days")LocalDate in3days);
+  List<CategorySubscriptionEntity> findSubscriptionsNeedingToBeRenewed(@Param("today")LocalDate today, @Param("in3days")LocalDate in3days);
 
   /**
    * Finds category subscriptions which expired in 3 or less days and have not been renewed yet.
@@ -56,13 +57,14 @@ public interface CategorySubscriptionRepo extends JpaRepository<CategorySubscrip
    * <p/>
    * To keep the method database agnostic no database date calculating functions are used and instead
    * the current date plus 3 days needs to be given as an argument.
+   * @param today the current date
    * @param in3days the current date plus 3 days
    * @return a list of subscriptions which need to be renewed
    */
   @Query("SELECT distinct cs.id FROM CategorySubscriptionEntity cs where cs.id in " +
       "(SELECT s.id FROM SubscriptionPeriodEntity p inner join p.subscription s " +
-      "where p.startDate > :in3days or (p.startDate < :in3days and p.endDate >= :in3days) " +
+      "where p.startDate > :today or (p.endDate > :today and p.endDate <= :in3days) " +
       "group by s.id having count(p.id) = 1)")
-  List<Integer> findIdsOfSubscriptionsNeedingToBeRenewed(@Param("in3days")LocalDate in3days);
+  List<Integer> findIdsOfSubscriptionsNeedingToBeRenewed(@Param("today")LocalDate today, @Param("in3days")LocalDate in3days);
 
 }

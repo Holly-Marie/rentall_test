@@ -49,10 +49,10 @@ public class KeycloakSecurityConfig extends KeycloakWebSecurityConfigurerAdapter
         .and().headers().frameOptions().sameOrigin()
         .and()
         .authorizeRequests(auth -> auth
-                .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .antMatchers("/actuator/**").permitAll() // TODO change to admin only in production
-                .antMatchers("/api-docs/**", "/public/**", "/api/public/**", "/api/doc/**").permitAll()
-                .antMatchers("/**").authenticated()
+            .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            .antMatchers("/actuator/**").hasRole("ADMIN")
+            .antMatchers("/api-docs/**", "/public/**", "/api/public/**", "/api/doc/**").permitAll()
+            .antMatchers("/**").authenticated()
         )
         .oauth2ResourceServer().jwt();
     http.formLogin().disable();
@@ -62,11 +62,10 @@ public class KeycloakSecurityConfig extends KeycloakWebSecurityConfigurerAdapter
   /**
    * Registers the KeycloakAuthenticationProvider with the authentication manager.
    *
-   * @param auth
-   * @throws Exception
+   * @param auth AuthenticationManagerBuilder
    */
   @Autowired
-  public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
+  public void configureGlobal(AuthenticationManagerBuilder auth) {
     log.debug("configureGlobal AuthenticationManagerBuilder");
     KeycloakAuthenticationProvider keycloakAuthenticationProvider = keycloakAuthenticationProvider();
     SimpleAuthorityMapper authorityMapper = new SimpleAuthorityMapper();
@@ -78,7 +77,7 @@ public class KeycloakSecurityConfig extends KeycloakWebSecurityConfigurerAdapter
   /**
    * Defines the session authentication strategy.
    *
-   * @return
+   * @return the configured SessionAuthenticationStrategy
    */
   @Bean
   @Override
@@ -90,7 +89,7 @@ public class KeycloakSecurityConfig extends KeycloakWebSecurityConfigurerAdapter
   /**
    * Make sure Spring Security Adapter looks at the configuration provided by the Spring Boot Adapter by adding this bean.
    *
-   * @return
+   * @return the configured KeycloakConfigResolver
    */
   @Bean
   public KeycloakConfigResolver KeycloakConfigResolver() {

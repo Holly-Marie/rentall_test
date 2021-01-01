@@ -43,5 +43,5 @@ public class UserEntity implements Serializable {
   private Set<CategorySubscriptionEntity> subscriptions = new HashSet<>();
 
   @OneToMany(mappedBy = "subscriber", fetch = FetchType.LAZY)
-  private Set<SubscriptionInvoiceEntity> invoices;
+  private Set<SubscriptionInvoiceEntity> invoices = new HashSet<>();
 }
