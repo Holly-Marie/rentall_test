@@ -12,11 +12,7 @@ import javax.annotation.PostConstruct;
 import java.math.BigDecimal;
 
 /**
- * [Class description.  The first sentence should be a meaningful summary of the class since it
- * will be displayed as the class summary on the Javadoc package page.]
- * <p>
- * [Other notes, including guaranteed invariants, usage instructions and/or examples, reminders
- * about desired improvements, etc.]
+ * This class inserts initial data into the database after start up.
  *
  * @author Holly Schoene
  * @version 2.0

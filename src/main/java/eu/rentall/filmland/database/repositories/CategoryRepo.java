@@ -9,15 +9,13 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * [Class description.  The first sentence should be a meaningful summary of the class since it
- * will be displayed as the class summary on the Javadoc package page.]
- * <p>
- * [Other notes, including guaranteed invariants, usage instructions and/or examples, reminders
- * about desired improvements, etc.]
+ * JPA repository for reading and manipulating CategoryEntities.
  *
  * @author Holly Schoene
  * @version 2.0
  * Created 30-12-2020 14:10
+ * @see JpaRepository
+ * @see CategoryEntity
  */
 public interface CategoryRepo extends JpaRepository<CategoryEntity, Integer> {
 

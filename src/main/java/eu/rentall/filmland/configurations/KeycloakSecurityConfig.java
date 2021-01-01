@@ -25,11 +25,7 @@ import org.springframework.security.web.authentication.session.SessionAuthentica
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 /**
- * [Class description.  The first sentence should be a meaningful summary of the class since it
- * will be displayed as the class summary on the Javadoc package page.]
- * <p>
- * [Other notes, including guaranteed invariants, usage instructions and/or examples, reminders
- * about desired improvements, etc.]
+ * Configuration of security aspects of the application, using a Keycloak server as the authentication provider.
  *
  * @author Holly Schoene
  * @version 2.0

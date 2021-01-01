@@ -24,7 +24,7 @@ public class SchedulingConfig {
     this.subscriptionService = subscriptionService;
   }
 
-  @Scheduled(cron = "0 4 * * * ?")
+  @Scheduled(cron = "0 4 * * * ?") // run every night at 4 am
   public void renewExpiringSubscriptions() {
     log.info("*** starting to renew and re-bill expiring subscriptions");
     subscriptionService.renewSubscriptions();

@@ -10,6 +10,7 @@ import eu.rentall.filmland.exceptions.CategoryNotFoundException;
 import eu.rentall.filmland.exceptions.NotSubscribedException;
 import eu.rentall.filmland.exceptions.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.ListUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -152,27 +153,35 @@ public class SubscriptionService {
   @Transactional
   public void renewSubscriptions() {
     final LocalDate today = LocalDate.now();
-    final List<CategorySubscriptionEntity> subscriptions = categorySubscriptionRepo.findSubscriptionsNeedingToBeRenewed(today.plusDays(3));
-    if(subscriptions == null || subscriptions.size() < 1) {
+    // just load all ids to be renewed since using spring jpa paging may not work correctly,
+    // because we are updating the items and that may influence their order in the page,
+    // which may lead to subscriptions being skipped
+    final List<Integer> subscriptionIds = categorySubscriptionRepo.findIdsOfSubscriptionsNeedingToBeRenewed(today.plusDays(3));
+    if(subscriptionIds == null || subscriptionIds.size() < 1) {
       log.info("no category subscriptions to renew");
       return;
     }
-    log.info("{} category subscription(s) to renew", subscriptions.size());
-    // TODO consider using paging if large amount of subscriptions will have to be renewed daily
-    if(subscriptions.size() > 1000) {
-      log.warn("system may run out of memory while processing so many subscriptions at once, consider implementing this with paging");
-    }
+    log.info("{} category subscription(s) to renew", subscriptionIds.size());
 
-    subscriptions.forEach(subscription -> {
-      final Optional<SubscriptionPeriodEntity> currentPeriodOpt = subscription.getPeriods().stream().filter(p -> p.getStartDate().isBefore(today) && p.getEndDate().isAfter(today)).findFirst();
-      if(currentPeriodOpt.isEmpty()) {
-        log.warn("Can not renew category subscription (id={}, category={}), since it has no current subscription period! Skipping it! " +
-            "This should never happen unless some one messed with the database directly.", subscription.getId(), subscription.getCategory().getName());
-        return; // skip if there is no current subscription period, this should never happen unless some one messed with the database directly
-      }
-      final SubscriptionPeriodEntity currentPeriod = currentPeriodOpt.get();
-      final SubscriptionPeriodEntity nextPeriod = createSubscriptionPeriod(subscription, currentPeriod.getEndDate().plusDays(1));
-      createInvoicesForSubscriptionPeriod(nextPeriod);
+    // process max 200 subscriptions at a time
+    List<List<Integer>> pages = ListUtils.partition(subscriptionIds, 200);
+
+    pages.forEach(page -> {
+      final List<CategorySubscriptionEntity> subscriptions = categorySubscriptionRepo.findAllById(page);
+
+      subscriptions.forEach(subscription -> {
+        final Optional<SubscriptionPeriodEntity> currentPeriodOpt = subscription.getPeriods().stream().filter(p -> p.getStartDate().isBefore(today) && p.getEndDate().isAfter(today)).findFirst();
+        if(currentPeriodOpt.isEmpty()) {
+          log.warn("Can not renew category subscription (id={}, category={}), since it has no current subscription period! Skipping it! " +
+              "This should never happen unless some one messed with the database directly.", subscription.getId(), subscription.getCategory().getName());
+          return; // skip if there is no current subscription period, this should never happen unless some one messed with the database directly
+        }
+        log.info("renewing subscription (id={}, category={})", subscription.getId(), subscription.getCategory().getName());
+        final SubscriptionPeriodEntity currentPeriod = currentPeriodOpt.get();
+        final SubscriptionPeriodEntity nextPeriod = createSubscriptionPeriod(subscription, currentPeriod.getEndDate().plusDays(1));
+        createInvoicesForSubscriptionPeriod(nextPeriod);
+      });
+      categorySubscriptionRepo.flush(); // flush the current page
     });
   }
 
