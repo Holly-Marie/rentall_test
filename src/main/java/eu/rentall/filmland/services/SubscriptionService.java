@@ -9,11 +9,15 @@ import eu.rentall.filmland.exceptions.AlreadySubscribedException;
 import eu.rentall.filmland.exceptions.CategoryNotFoundException;
 import eu.rentall.filmland.exceptions.NotSubscribedException;
 import eu.rentall.filmland.exceptions.UserNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -31,6 +35,7 @@ import java.util.stream.Collectors;
  * @version 2.0
  * Created 30-12-2020 20:04
  */
+@Slf4j
 @Service
 public class SubscriptionService {
 
@@ -88,12 +93,7 @@ public class SubscriptionService {
     final Optional<UserEntity> userOpt = userRepo.findByEmailIgnoreCase(userEmail);
     final UserEntity subscriber = userOpt.orElseThrow(() -> new UserNotFoundException(String.format("Could not find user with email: %s", userEmail)));
 
-    final Optional<CategoryEntity> categoryOpt = categoryRepo.findByNameIgnoreCase(categoryName);
-    final CategoryEntity categoryEntity = categoryOpt.orElseThrow(() -> new CategoryNotFoundException(String.format("Could not find category with name: %s", categoryName)));
-
-    if (categorySubscriptionRepo.isUserSubscribed(userEmail, categoryName)) {
-      throw new AlreadySubscribedException(String.format("User with email: %s is already subscribed to category: %s", userEmail, categoryName));
-    }
+    final CategoryEntity categoryEntity = getCategoryIfUserIsNotAlreadySubscribedToIt(userEmail, categoryName);
 
     final CategorySubscriptionEntity subscription = categorySubscriptionRepo.save(CategorySubscriptionEntity.builder()
         .category(categoryEntity)
@@ -111,30 +111,9 @@ public class SubscriptionService {
       categoryEntity.getSubscriptions().add(subscription);
     }
 
-    final SubscriptionPeriodEntity firstPeriod = subscriptionPeriodRepo.save(SubscriptionPeriodEntity.builder()
-        .subscription(subscription)
-        .startDate(subscription.getStartDate())
-        .endDate(subscription.getStartDate().plusMonths(1))
-        .remainingContent(categoryEntity.getAvailableContent())
-        .build());
+    final SubscriptionPeriodEntity firstPeriod = createSubscriptionPeriod(subscription, subscription.getStartDate());
 
-    final SubscriptionInvoiceEntity firstInvoice = invoiceRepo.save(SubscriptionInvoiceEntity.builder()
-        .date(subscription.getStartDate())
-        .price(BigDecimal.ZERO)
-        .subscriber(subscriber)
-        .subscriptionPeriod(firstPeriod)
-        .build());
-
-    if (subscriber.getInvoices() == null) {
-      subscriber.setInvoices(Set.of(firstInvoice));
-    } else {
-      subscriber.getInvoices().add(firstInvoice);
-    }
-    if (firstPeriod.getInvoices() == null) {
-      firstPeriod.setInvoices(Set.of(firstInvoice));
-    } else {
-      firstPeriod.getInvoices().add(firstInvoice);
-    }
+    createInvoicesForSubscriptionPeriod(firstPeriod);
   }
 
   /**
@@ -156,12 +135,7 @@ public class SubscriptionService {
     final Optional<UserEntity> userToShareWithOpt = userRepo.findByEmailIgnoreCase(otherEmail);
     final UserEntity userToShareWith = userToShareWithOpt.orElseThrow(() -> new UserNotFoundException(String.format("Could not find other user with email: %s", otherEmail)));
 
-    final Optional<CategoryEntity> categoryOpt = categoryRepo.findByNameIgnoreCase(categoryName);
-    final CategoryEntity categoryEntity = categoryOpt.orElseThrow(() -> new CategoryNotFoundException(String.format("Could not find category with name: %s", categoryName)));
-
-    if (categorySubscriptionRepo.isUserSubscribed(otherEmail, categoryName)) {
-      throw new AlreadySubscribedException(String.format("User with email: %s is already subscribed to category: %s", otherEmail, categoryName));
-    }
+    final CategoryEntity categoryEntity = getCategoryIfUserIsNotAlreadySubscribedToIt(otherEmail, categoryName);
 
     subscriber.getSubscriptions().stream().filter(cs -> cs.getCategory().getId() == categoryEntity.getId()).findFirst().ifPresentOrElse(cs -> {
       cs.getSubscribers().add(userToShareWith);
@@ -177,6 +151,113 @@ public class SubscriptionService {
 
   @Transactional
   public void renewSubscriptions() {
+    final LocalDate today = LocalDate.now();
+    final List<CategorySubscriptionEntity> subscriptions = categorySubscriptionRepo.findSubscriptionsNeedingToBeRenewed(today.plusDays(3));
+    if(subscriptions == null || subscriptions.size() < 1) {
+      log.info("no category subscriptions to renew");
+      return;
+    }
+    log.info("{} category subscription(s) to renew", subscriptions.size());
+    // TODO consider using paging if large amount of subscriptions will have to be renewed daily
+    if(subscriptions.size() > 1000) {
+      log.warn("system may run out of memory while processing so many subscriptions at once, consider implementing this with paging");
+    }
 
+    subscriptions.forEach(subscription -> {
+      final Optional<SubscriptionPeriodEntity> currentPeriodOpt = subscription.getPeriods().stream().filter(p -> p.getStartDate().isBefore(today) && p.getEndDate().isAfter(today)).findFirst();
+      if(currentPeriodOpt.isEmpty()) {
+        log.warn("Can not renew category subscription (id={}, category={}), since it has no current subscription period! Skipping it! " +
+            "This should never happen unless some one messed with the database directly.", subscription.getId(), subscription.getCategory().getName());
+        return; // skip if there is no current subscription period, this should never happen unless some one messed with the database directly
+      }
+      final SubscriptionPeriodEntity currentPeriod = currentPeriodOpt.get();
+      final SubscriptionPeriodEntity nextPeriod = createSubscriptionPeriod(subscription, currentPeriod.getEndDate().plusDays(1));
+      createInvoicesForSubscriptionPeriod(nextPeriod);
+    });
+  }
+
+  private CategoryEntity getCategoryIfUserIsNotAlreadySubscribedToIt(@NotBlank String otherEmail, @NotBlank String categoryName) {
+    final Optional<CategoryEntity> categoryOpt = categoryRepo.findByNameIgnoreCase(categoryName);
+    final CategoryEntity categoryEntity = categoryOpt.orElseThrow(() -> new CategoryNotFoundException(String.format("Could not find category with name: %s", categoryName)));
+
+    if (categorySubscriptionRepo.isUserSubscribed(otherEmail, categoryName)) {
+      throw new AlreadySubscribedException(String.format("User with email: %s is already subscribed to category: %s", otherEmail, categoryName));
+    }
+    return categoryEntity;
+  }
+
+  private SubscriptionPeriodEntity createSubscriptionPeriod(@NotNull CategorySubscriptionEntity subscription, @NotNull LocalDate startDate) {
+    final SubscriptionPeriodEntity period = subscriptionPeriodRepo.save(SubscriptionPeriodEntity.builder()
+        .subscription(subscription)
+        .startDate(startDate)
+        .endDate(startDate.plusMonths(1))
+        .remainingContent(subscription.getCategory().getAvailableContent())
+        .build());
+    if (subscription.getPeriods() == null) {
+      subscription.setPeriods(Set.of(period));
+    } else {
+      subscription.getPeriods().add(period);
+    }
+
+    return period;
+  }
+
+  private void createInvoicesForSubscriptionPeriod(@NotNull SubscriptionPeriodEntity period) {
+    CategorySubscriptionEntity subscription = period.getSubscription();
+    if(subscription == null) {
+      log.warn("Can not create invoice for subscription period (id={}, startDate={}, endDate={}), since it belongs to no subscription! Skipping it! " +
+          "This should never happen unless some one messed with the database directly.", period.getId(), period.getStartDate(), period.getEndDate());
+      return; // this should never happen unless someone messes with the database directly
+    }
+    CategoryEntity category = subscription.getCategory();
+    if(category == null) {
+      log.warn("Can not create invoice for subscription period (id={}, startDate={}, endDate={}), since its subscription belongs to no category! Skipping it! " +
+          "This should never happen unless some one messed with the database directly.", period.getId(), period.getStartDate(), period.getEndDate());
+      return; // this should never happen unless someone messes with the database directly
+    }
+    Set<UserEntity> subscribers = subscription.getSubscribers();
+    if(subscribers == null || subscribers.size() < 1) {
+      log.warn("Can not create invoice for subscription period (id={}, startDate={}, endDate={}), since its subscription has no subscribers! Skipping it! " +
+          "This should never happen unless some one messed with the database directly.", period.getId(), period.getStartDate(), period.getEndDate());
+      return; // this should never happen unless someone messes with the database directly
+    }
+
+    subscribers.forEach(subscriber -> {
+      final SubscriptionInvoiceEntity invoice = invoiceRepo.save(SubscriptionInvoiceEntity.builder()
+          .date(subscription.getStartDate())
+          .price(calculateCurrentSubscriptionPricePerSubscriber(subscription))
+          .subscriber(subscriber)
+          .subscriptionPeriod(period)
+          .build());
+
+      if (subscriber.getInvoices() == null) {
+        subscriber.setInvoices(Set.of(invoice));
+      } else {
+        subscriber.getInvoices().add(invoice);
+      }
+      if (period.getInvoices() == null) {
+        period.setInvoices(Set.of(invoice));
+      } else {
+        period.getInvoices().add(invoice);
+      }
+    });
+  }
+
+  @NotNull
+  private BigDecimal calculateCurrentSubscriptionPricePerSubscriber(@NotNull CategorySubscriptionEntity subscription) {
+    if(subscription.getSubscribers() == null || subscription.getSubscribers().size() < 1) {
+      throw new IllegalArgumentException("subscription.getSubscribers() must not be null or contain no subscribers");
+    }
+    if(subscription.getCategory() == null || subscription.getCategory().getPrice() == null || subscription.getCategory().getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+      throw new IllegalArgumentException("subscription.getCategory().getPrice() must not be null or be 0 or less");
+    }
+
+    BigDecimal pricePerSubscriber = BigDecimal.ZERO;
+    if(subscription.getPeriods().size() > 1) {
+      // this is not the first subscription period
+      MathContext mc = new MathContext(2, RoundingMode.CEILING); // we always round up and may over charge a fraction of a cent but never undercharge
+      pricePerSubscriber = subscription.getCategory().getPrice().divide(BigDecimal.valueOf(subscription.getSubscribers().size()), mc);
+    }
+    return pricePerSubscriber;
   }
 }
